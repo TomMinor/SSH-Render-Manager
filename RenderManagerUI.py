@@ -21,11 +21,12 @@ from threading import Timer
 import mayaJob
 
 """
-This code is really hideous i'm sorry
+Not the most readable code in places, but it works for what it is.
 
-BUGS (just in the GUI component, mayaJob has it's own problems) : 
+PROBLEMS (just in the GUI component, mayaJob has it's own problems) : 
   - Windows paths ('D:\images') won't be read from the workspace file properly, should add in a check for this but not a huge problem yet
-
+  - Lowering update rate when the screensaver is active only works on Gnome (Red Hat uses Gnome so not a problem at uni)
+  - SSH keys _must_ be setup for all the hosts for this to work properly.
 """
 
 def secureCopy(host, src, dst, logger=None, limit=8912):
@@ -44,38 +45,47 @@ def secureCopy(host, src, dst, logger=None, limit=8912):
             print command
             print e.message
 
-def displayError(type, msg, logger=None):
+def displayError(type_, msg, logger=None):
     output = 'Error %s : %s' % (type, msg)
     if logger:
         logger.error(output, exc_info=sys.exc_info())
     else:
         print output
 
-    tkmsg.showinfo(type, msg)
+    tkmsg.showinfo(type_, msg)
 
 def verifyHost(host, timeout=1):
     """
     Will fail if the host is not accessible 
     """
     print "Verifying host %s" % host
-    result = subprocess.Popen(['ssh', '-o', 'ConnectTimeout=%d' % timeout, host, 'hostname'], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait()
+    result = subprocess.Popen(['ssh', '-o', 'ConnectTimeout=%d' % timeout, host, 'hostname'], 
+                                stdout=subprocess.PIPE, 
+                                stderr=subprocess.PIPE).wait()
     # Returns 255 if the host is not accessible
     # Returns 130 if the wrong password was entered (no point checking this right now)
     return result != 255
 
-def modifyDisabledText(entryText, msg, startCursor = 0, colour='#000000'):
+def modifyDisabledText(entryText, msg, startCursor = 0, colour='#000000', multiLine=False):
     entryText.config(state='normal')
     entryText.delete(startCursor, tk.END)
     entryText.insert(tk.END, msg)
-    entryText.see(tk.END)
+
+    if multiLine:
+        entryText.see(tk.END)
+    else:
+        entryText.icursor(tk.END)
+
     entryText.config(state='disabled')
     entryText.config(fg=colour)
 
 def screensaverEnabled():
-    return subprocess.Popen('gnome-screensaver-command -q | grep "is active"', 
+    query = subprocess.Popen('gnome-screensaver-command -q | grep "is inactive"', 
                             shell=True, 
                             stdout=subprocess.PIPE, 
-                            stderr=subprocess.PIPE).wait()
+                            stderr=subprocess.PIPE)
+    print query.wait()
+    return query.wait()
 
 class ManagerUI(tk.Frame):
     # When the screensaver is detected the update rate for the job update thread
@@ -91,7 +101,7 @@ class ManagerUI(tk.Frame):
     MIN_WINDOW_SIZE = (1024, 768)
     APPDIR = os.path.expanduser('~/.rendermanager')
 
-    updateThreadDelay = SCREENSAVER_ON_DELAY
+    updateThreadDelay = SCREENSAVER_OFF_DELAY
     
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
@@ -99,7 +109,7 @@ class ManagerUI(tk.Frame):
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
 
-        if not os.exists(ManagerUI.APPDIR):
+        if not os.path.exists(ManagerUI.APPDIR):
             os.makedirs(ManagerUI.APPDIR)
 
         mainLogPath = os.path.join(ManagerUI.APPDIR, 'main.log')
@@ -185,6 +195,8 @@ class ManagerUI(tk.Frame):
         self.defaults = {}
         self.defaults['binDir'] = '/opt/autodesk/maya2014-x64/bin/Render'
         self.defaults['outputDir'] = outputDir
+        self.defaults['camOverride'] = outputDir
+        self.defaults['outputDir'] = outputDir
         self.defaults['frames'] = (0, 0)
 
         #self.logger.debug('Defaults \n %s' % json.dumps(self.defaults, indent=3))
@@ -216,16 +228,18 @@ class ManagerUI(tk.Frame):
         
     def refreshUI(self):
         if screensaverEnabled:
-            if ManagerUI.updateThreadDelay != SCREENSAVER_ON_DELAY:
-                self.logger.debug('User is active, decreasing update thread delay to %f' % SCREENSAVER_ON_DELAY)
-                ManagerUI.updateThreadDelay = SCREENSAVER_ON_DELAY
-                self.updateThread.cancel()
+            if ManagerUI.updateThreadDelay != ManagerUI.SCREENSAVER_OFF_DELAY:
+                self.logger.debug('User is active, decreasing update thread delay to %f' % ManagerUI.SCREENSAVER_OFF_DELAY)
+                ManagerUI.updateThreadDelay = ManagerUI.SCREENSAVER_OFF_DELAY
+                if self.updateThread: 
+                    self.updateThread.cancel()
                 self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
         else:
-            if ManagerUI.updateThreadDelay != SCREENSAVER_OFF_DELAY:
-                self.logger.debug('User is inactive, increasing update thread delay to %f' % SCREENSAVER_OFF_DELAY)
-                ManagerUI.updateThreadDelay = SCREENSAVER_OFF_DELAY
-                self.updateThread.cancel()
+            if ManagerUI.updateThreadDelay != ManagerUI.SCREENSAVER_ON_DELAY:
+                self.logger.debug('User is inactive, increasing update thread delay to %f' % ManagerUI.SCREENSAVER_ON_DELAY)
+                ManagerUI.updateThreadDelay = ManagerUI.SCREENSAVER_ON_DELAY
+                if self.updateThread: 
+                    self.updateThread.cancel()
                 self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
 
         selection = self.jobListbox_list.curselection()
@@ -243,38 +257,25 @@ class ManagerUI(tk.Frame):
         for select in selection:
             self.jobListbox_list.select_set(select[0])
 
-        if self.renderJobs:
-            if self.selectedJobID != -1:
-                if self.lastOutput != self.renderJobs[self.selectedJobID].output:
-                    logOutput = ''.join([ '%s\n' % line for line in self.renderJobs[self.selectedJobID].output ])
-                    modifyDisabledText(self.jobOut, logOutput, startCursor='1.0')
-                    self.lastOutput = self.renderJobs[self.selectedJobID].output
-
-                    """
-                    self.jobOut.config(state='normal')
-                    self.jobOut.delete('1.0', tk.END)
-
-                    for line in self.renderJobs[self.selectedJobID].output:
-                        self.jobOut.insert(tk.END, '%s\n' % line)
-
-                    self.jobOut.see(tk.END)
-                    self.jobOut.config(state='disabled')
-                    """
-
-
+        if self.selectedJobID != -1:
             job = self.renderJobs[self.selectedJobID]
-            modifyDisabledText(self.entCurrentFrame, job.currentFrame)
-            self.prgRenderProgressFrame["value"] = job.frameProgress
-            self.prgRenderProgress["value"] = job.progress
 
-        if self.selectedJobID == -1:
+            if self.lastOutput != job.output:
+                logOutput = ''.join([ '%s\n' % line for line in job.output ])
+                modifyDisabledText(self.jobOut, logOutput, startCursor='1.0')
+                self.lastOutput = job.output
+
+                modifyDisabledText(self.entCurrentFrame, job.currentFrame)
+                self.prgRenderProgressFrame["value"] = job.frameProgress
+                self.prgRenderProgress["value"] = job.progress
+
+                self.btnJobRestart.config(state=tk.NORMAL)
+                self.btnJobRemove.config(state=tk.NORMAL)
+                self.btnJobKill.config(state=tk.NORMAL)
+        else:
             self.btnJobRestart.config(state=tk.DISABLED)
             self.btnJobRemove.config(state=tk.DISABLED)
             self.btnJobKill.config(state=tk.DISABLED)
-        else:
-            self.btnJobRestart.config(state=tk.NORMAL)
-            self.btnJobRemove.config(state=tk.NORMAL)
-            self.btnJobKill.config(state=tk.NORMAL)
 
         self.parent.after(ManagerUI.UI_REFRESH_DELAY, self.refreshUI)
 
@@ -291,11 +292,15 @@ class ManagerUI(tk.Frame):
                                 job.close()
                                 displayError('Update job', 'Cannot start job', self.logger)
                         job.update()
-              
+                        
             self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
         else:
-            for job in self.renderJobs:
+            self.logger.info('Update thread closing...')
+            for i, job in enumerate(self.renderJobs):
+                self.logger.info('Closing job #%d...' % i)
                 job.close()
+                self.logger.info('Done')
+            self.logger.info('All jobs closed, terminating thread')
             del self.renderJobs
 
     def initWidgets(self):
@@ -643,8 +648,9 @@ class ManagerUI(tk.Frame):
         else: 
           self.updateThread.cancel()
         self.logger.info('======= Finished ======= ')
-        self.parent.quit()
-
+        self.parent.destroy()
+        #self.parent.quit()
+        sys.exit(0)
 
     def getDirectory(self, output, parent, initialDir=None):
         args = self.dirOpt

@@ -19,21 +19,38 @@ import uuid
 
 """
 PROBLEMS:
- - Dodgy things happen with shared SSH connections enabled (pausing this ssh session pauses them all for example, caused a hideous system freeze up when I locked my machine and tried to log back in while I left the Job paused
- - Really primitive way of error checking, will first check the session output for COMPLETE_SUCCESS or COMPLETE_ERROR (these are printed when the render process ends) and then grabs the latest output from the log files, using it to parse out the progress percentage & current frame number
- - If the process was killed remotely (ie, ssh'ing directly into the machine and killing the maya.bin process) then the job will not notice and will just carry on running without ever changing state. This isn't a huge problem as you will probably notice that it has timed out and can terminate it manually.
+ - Dodgy things happen with shared SSH connections enabled (pausing this ssh session pauses them all for example, caused a hideous system freeze up when I locked my machine and tried to log back in while I left the Job paused).
+    + Disable shared SSH connections when using this.
 
-WHAT IT DO:
+ - Pausing/unpausing (SIGSTOP/SIGCONT respectively) fails to affect the render process, unsure if it pauses the shell itself successfully. This worked at one point, unsure what broke it.
+    + This functionality is disabled in the UI for now.
+
+ - Primitive way of error checking, will first check the session output for COMPLETE_SUCCESS or COMPLETE_ERROR (these are printed when the render process ends) and then grabs the latest output from the log files, using it to parse out the progress percentage & current frame number.
+    + The job output is updated as the session is polled, this is displayed to the user via the UI and may be used for error checking if the script fails to figure it out itself.
+
+ - If the process was killed remotely (ie, ssh'ing directly into the machine and killing the maya.bin process) then the job may not notice and will just carry on running without ever changing state. This isn't a huge problem as you will probably notice that it has timed out and can terminate it manually. 
+    + Adding a timeout for how long the job will go without an obvious update could work 
+
+
+
+WHAT IT DOES:
  - Start a maya render process on a remote host
  - Parse the output to figure out the render status
  - On process exit > 
   - If COMPLETE_SUCCESS is read then the session is terminated
-  - If COMPLETE_ERROR is read then the session is terminated and the log file parsed for 'maya exited with error(x)', then we can grab the error code (no idea where a list of what these codes mean is stored though)
+  - If COMPLETE_ERROR is read then the session is terminated and the log file parsed for 'maya exited with error(x)', then we can grab the error code
 
  - 
 """
 
 class Job:
+  """
+  Perhaps this should be broken up, it's pretty huge now
+
+  TODO:
+    Does setting the frame range update the output? s-100 -> scene_0100.tga
+  """
+
   STATE = {
       'i' : "Idle",
       'r' : "Running",
@@ -42,9 +59,21 @@ class Job:
       'c' : "Finished"
       }
 
-  def __init__(self, host, scenePath, outputPath, frameRange, 
-                    camOverride=None, resolutionOverride=None, user=None, 
-                    binPath='/opt/autodesk/maya2014-x64/bin/Render', logPath=None):
+  ERROR = {
+      0 : 'Success'
+      }
+
+  def __init__(self, 
+                host, 
+                scenePath, 
+                frameRange=None, 
+                outputPath=None, 
+                camOverride=None, 
+                resolutionOverride=None, 
+                user=None, 
+                binPath='/opt/autodesk/maya2014-x64/bin/Render', 
+                logPath=None):
+
     # Store the original args to restarting the job
     self.originalArgs = locals()
     self.originalArgs.pop('self')
@@ -60,10 +89,10 @@ class Job:
       with open(self._jobLogFile, 'w') as f:
         f.write('')
         
-      handler = logging.FileHandler(self._jobLogFile)
-      self.logger.addHandler(handler)
-      formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-      handler.setFormatter(formatter)
+    handler = logging.FileHandler(self._jobLogFile)
+    self.logger.addHandler(handler)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    handler.setFormatter(formatter)
     self.logger.setLevel(logging.DEBUG)
 
     # The regex pattern to search for in the output to retrieve the current percentage 
@@ -116,16 +145,24 @@ class Job:
           self.logger.debug('File name prefix not set, using scene name (%s)' % self.outputPrefix)
 
     self._processArgs = []
-    # Frame range
-    self._processArgs.append( ('s', str(self._frameRange[0])) ) 
-    self._processArgs.append( ('e', str(self._frameRange[1])) )
+
+    if frameRange:
+      self._processArgs.append( ('s', str(self._frameRange[0])) ) 
+      self._processArgs.append( ('e', str(self._frameRange[1])) )
+
     if resolutionOverride:
-        self._processArgs.append( ('x', str(resolutionOverride[0])) )
-        self._processArgs.append( ('y', str(resolutionOverride[0])) )
+      self._processArgs.append( ('x', str(resolutionOverride[0])) )
+      self._processArgs.append( ('y', str(resolutionOverride[0])) )
+      
+    if camOverride:
+      self._processArgs.append( ('cam', camOverride) )
+
     # Verbose output
     self._processArgs.append( ('v', '5') )
     self._processArgs.append( ('verb', '') )
+    self._processArgs.append( ('rep', '') )
     
+    # Force renderer to mental ray
     self._processArgs.append( ('r', 'mr') )  
     # MR specific args
     self._processArgs.append( ('art', '') ) 
@@ -211,7 +248,7 @@ class Job:
 
   def run(self):
     if self._state == 'i':
-      self.logger.info('Executing remote process')
+      self.logger.info('Executing remote process on %s' % self.host)
       # Run the process and evaluate it's return value when complete, ensuring we capture success/failure
       self.process.sendline(';'.join([r'nice %s' % self._processCall,
                                       r"RETVAL=$?",
@@ -220,7 +257,8 @@ class Job:
                                       ))
 
       self.logger.info('Ignoring initial output')
-      # Lazy way of ignoring the first few lines of output
+
+      # Read until the job starts, and write any errors to file if it cannot
       tmp = ''
       while tmp.split('\n')[-1] != 'Locale is: "Locale:en_GB.utf8 CodeSet:UTF-8"':
         try:
@@ -230,7 +268,7 @@ class Job:
             # Premature exit
             try:
               self.logger.error(lines[-2])
-            except:
+            except Exception:
               pass
 
             with open(self._logPath, 'a+') as mayaLog:
@@ -276,7 +314,7 @@ class Job:
             f.seek(self.p)
             latest_data = f.read().split('\n')
             #self.p = f.tell()
-            self.p = 0 # nasty performance, but for some reason it doesn't like reading the data properlty if we read from the last position
+            self.p = 0 # nasty performance, but for some reason it doesn't like reading the data properly if we read from the last position
 
             self.output = [ line for line in latest_data ]
 
@@ -311,42 +349,42 @@ class Job:
 
   def pause(self):
     if not self._state == 'p':
-      self.logger.info('Job paused')
-      self.process.kill(23) #SIGSTOP
-      self.__setState('p')
+        self.logger.info('Job paused')
+        self.process.kill(23) #SIGSTOP
+        self.__setState('p')
 
   def resume(self):
     if self._state == 'p':
-      self.logger.info('Job resumed')
-      self.process.kill(25) #SIGCONT
-      self.__setState('r')
+        self.logger.info('Job resumed')
+        self.process.kill(25) #SIGCONT
+        self.__setState('r')
 
   def kill(self):
     self.resume()
     if self._state == 'r':
-      self.logger.info("Killing %s" % self._binPath)
-      self.process.kill(9) #SIGKILL
-      self._state = 'e' if self.errorCode else 'c'
+        self.logger.info("Killing %s" % self._binPath)
+        self.process.kill(9) #SIGKILL
+        self._state = 'e' if self.errorCode else 'c'
 
   def close(self):
     self.logger.info('Closing session')
     self.kill()
 
     if not self.completed(): 
-      self.__onComplete(success=False)
+        self.__onComplete(success=False)
 
     try:
-      self.process.logout()
+        self.process.logout()
     except OSError as e:
-      self.logger.error(e.message)
+        self.logger.error(e.message)
     except ValueError as e:
-      self.logger.error(e.message)
+        self.logger.error(e.message)
 
     try:
-      with open(self._logPath, 'r') as mayaLog:
-        self._output = [ line for line in mayaLog ]
+        with open(self._logPath, 'r') as mayaLog:
+            self._output = [ line for line in mayaLog ]
     except IOError as e:
-      self.logger.error(e.message)
+        self.logger.error(e.message)
 
     self.process.close(force=True)
 
@@ -381,6 +419,10 @@ class Job:
     return self._camOverride
 
   @property
+  def resolutionOverride(self):
+    return self._resOverride
+
+  @property
   def logPath(self):
     return self._logPath
 
@@ -391,10 +433,6 @@ class Job:
   @property
   def sessionUser(self):
     return self._user
-
-  @property
-  def resolutionOverride(self):
-    return self._resOverride
 
   @property
   def state(self):
@@ -428,6 +466,13 @@ class Job:
       return 0
 
   @property
+  def errorCodeDetail(self):
+    if self.errorCode in Job.ERROR:
+      return Job.ERROR[self.errorCode]
+    else:
+      return 'Unknown error'
+
+  @property
   def totalFrames(self):
     return self._maxFrame
 
@@ -438,24 +483,3 @@ class Job:
   @property
   def running(self):
     return self._state == 'r'
-
-if __name__ == "__main__":
-      HOST = 'w32307'
-      USER = 'i7245143'
-      SCENE = '~/Downloads/AmbientFin.ma'
-      OUTDIR = '/transfer/PJ'
-
-      test = Job(host='w32307', scenePath=SCENE, outputPath=OUTDIR, frameRange=(10,14), resolutionOverride=(128,128))
-      test2 = Job(host='w32304', scenePath=SCENE, outputPath=OUTDIR, frameRange=(2,10), resolutionOverride=(128,128))
-
-      test.run()
-      test2.run()
-
-      while True:
-        test.update()
-        test2.update()
-        if not test.completed(): print test
-        if not test2.completed(): print test2
-        if test.completed() and test2.completed():
-          break
-      print "Done"
