@@ -1,0 +1,16 @@
+2014-08-01 20:41:37,742 INFO ======= Starting render manager =======
+2014-08-01 20:41:47,265 INFO Loading workspace from user directory /home/tom/Downloads/workspace.mel
+2014-08-01 20:41:47,266 INFO Workspace file exists
+2014-08-01 20:41:47,266 INFO Reading file...
+2014-08-01 20:41:47,267 INFO Checking for "images" entry...
+2014-08-01 20:41:47,267 INFO Success on line 54 : workspace -fr "images" "D:/images";
+
+2014-08-01 20:41:47,268 INFO Using output directory D:/images
+2014-08-01 20:41:47,268 INFO Relative path detected, expanding to /home/tom/Downloads/D:/images
+2014-08-01 20:41:47,268 INFO Loading hosts from /home/tom/.rendermanager/hostMachines
+2014-08-01 20:41:51,326 INFO Inaccessible host w32301, skipping
+2014-08-01 20:41:55,363 INFO Inaccessible host w32302, skipping
+2014-08-01 20:41:59,404 INFO Inaccessible host w32304, skipping
+2014-08-01 20:42:03,440 INFO Inaccessible host w32305, skipping
+2014-08-01 20:42:07,483 INFO Inaccessible host w32306, skipping
+2014-08-01 20:42:11,526 INFO Inaccessible host w32307, skipping

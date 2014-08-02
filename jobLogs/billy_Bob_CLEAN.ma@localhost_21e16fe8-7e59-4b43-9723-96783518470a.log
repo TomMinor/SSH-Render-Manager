@@ -1,0 +1,6 @@
+2014-08-01 03:52:23,917 DEBUG Maya job log path: /home/tom/.rendermanager/renderLogs/billy_Bob_CLEAN/localhost/D01:08:2014_T03:52:23.log
+2014-08-01 03:52:23,918 DEBUG Session user : tom
+2014-08-01 03:52:23,919 DEBUG Parsing scene file for output prefix...
+2014-08-01 03:52:23,957 DEBUG File name prefix not set, using scene name (billy_Bob_CLEAN)
+2014-08-01 03:52:23,958 DEBUG Setting initial state to Idle
+2014-08-01 03:52:24,643 ERROR Cannot log on as tom@localhost
