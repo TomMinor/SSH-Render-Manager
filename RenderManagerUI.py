@@ -168,22 +168,22 @@ class ManagerUI(tk.Frame):
         self.hosts = []
         
         try:
-          with open(hostsDir) as f:
-            for line in f:
-              if line:
-                # Ignore commented lines
-                if line[0] != '#':
-                  hostMachine = line.rstrip()
+            with open(hostsDir) as f:
+                for line in f:
+                    if line:
+                        # Ignore commented lines
+                        if line[0] != '#':
+                            hostMachine = line.rstrip()
                   
-                  if verifyHost(hostMachine):
-                    self.hosts.append(hostMachine)
-                  else:
-                    self.logger.info("Inaccessible host %s, skipping" % hostMachine)
-            else:
-                if not self.hosts:
-                    raise IOError("Hosts file '%s' contains no hosts" % hostsDir)
+                            if verifyHost(hostMachine):
+                                self.hosts.append(hostMachine)
+                            else:
+                                self.logger.info("Inaccessible host %s, skipping" % hostMachine)
+                else:
+                    if not self.hosts:
+                        raise IOError("Hosts file '%s' contains no hosts" % hostsDir)
         except IOError as e:
-          displayError('File not found', e.message, self.logger)
+            displayError('File not found', e.message, self.logger)
 
         # Remove duplicates
         self.hosts = list(set(self.hosts))
@@ -269,9 +269,9 @@ class ManagerUI(tk.Frame):
                 self.prgRenderProgressFrame["value"] = job.frameProgress
                 self.prgRenderProgress["value"] = job.progress
 
-                self.btnJobRestart.config(state=tk.NORMAL)
-                self.btnJobRemove.config(state=tk.NORMAL)
-                self.btnJobKill.config(state=tk.NORMAL)
+            self.btnJobRestart.config(state=tk.NORMAL)
+            self.btnJobRemove.config(state=tk.NORMAL)
+            self.btnJobKill.config(state=tk.NORMAL)
         else:
             self.btnJobRestart.config(state=tk.DISABLED)
             self.btnJobRemove.config(state=tk.DISABLED)
@@ -378,28 +378,38 @@ class ManagerUI(tk.Frame):
 
         btnPad = 3
 
+        columnCounter = 1
+
         self.btnJobAdd = ttk.Button(self.jobList, text="New", command=self.onJobAdd)
-        self.btnJobAdd.grid(row=1, column=1, sticky="n", padx=btnPad, pady=btnPad)
+        self.btnJobAdd.grid(row=1, column=columnCounter, sticky="n", padx=btnPad, pady=btnPad)
         self.btnJobAdd.rowconfigure(0, weight=0)
         self.btnJobAdd.columnconfigure(0, weight=0)
 
+        columnCounter += 1
+
         self.btnJobRestart = ttk.Button(self.jobList, text="Restart", command=self.onJobRestart)
-        self.btnJobRestart.grid(row=1, column=2, sticky="n", padx=btnPad, pady=btnPad)
+        self.btnJobRestart.grid(row=1, column=columnCounter, sticky="n", padx=btnPad, pady=btnPad)
         self.btnJobRestart.rowconfigure(0, weight=0)
         self.btnJobRestart.columnconfigure(0, weight=0)
 
+        columnCounter += 1
+
         self.btnJobRemove = ttk.Button(self.jobList, text="Remove", command=self.onJobRemove)
-        self.btnJobRemove.grid(row=1, column=3, sticky="n", padx=btnPad, pady=btnPad)
+        self.btnJobRemove.grid(row=1, column=columnCounter, sticky="n", padx=btnPad, pady=btnPad)
         self.btnJobRemove.rowconfigure(0, weight=0)
         self.btnJobRemove.columnconfigure(0, weight=0)
 
+        columnCounter += 1
+
         self.btnJobPause = ttk.Button(self.jobList, text="Pause", command=self.onJobPauseToggle, state=tk.DISABLED)
-        self.btnJobPause.grid(row=1, column=4, sticky="n", padx=btnPad, pady=btnPad)
+        self.btnJobPause.grid(row=1, column=columnCounter, sticky="n", padx=btnPad, pady=btnPad)
         self.btnJobPause.rowconfigure(0, weight=0)
         self.btnJobPause.columnconfigure(0, weight=0)
 
+        columnCounter += 1
+
         self.btnJobKill = ttk.Button(self.jobList, text="Kill", command=self.onJobKill)
-        self.btnJobKill.grid(row=1, column=5, sticky="n", padx=btnPad, pady=btnPad)
+        self.btnJobKill.grid(row=1, column=columnCounter, sticky="n", padx=btnPad, pady=btnPad)
         self.btnJobKill.rowconfigure(0, weight=0)
         self.btnJobKill.columnconfigure(0, weight=0)
 
