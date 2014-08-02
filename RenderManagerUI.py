@@ -97,7 +97,7 @@ class ManagerUI(tk.Frame):
     SCREENSAVER_OFF_DELAY = 0.1
     UI_REFRESH_DELAY = 100
 
-    MIN_WINDOW_SIZE = (1024, 768)
+    MIN_WINDOW_SIZE = (800, 600)
     APPDIR = os.path.expanduser('~/.rendermanager')
 
     updateThreadDelay = SCREENSAVER_OFF_DELAY
@@ -515,10 +515,21 @@ class ManagerUI(tk.Frame):
         self.prgRenderProgress.grid(row=rowCounter, column=0, sticky='W', columnspan=2)
 
         # Terminal output #
-        self.jobOut = tk.Text(self.jobOutput, fg="white", bg="black", state=tk.DISABLED)
+        self.frmJobOut = tk.Frame(self.jobOutput)
+        self.frmJobOut.rowconfigure(0, weight=1)
+        self.frmJobOut.columnconfigure(0, weight=1)
+        self.frmJobOut.grid(row=0, column=0, sticky="news")
+
+        self.jobOut_scr = tk.Scrollbar(self.frmJobOut)
+
+        self.jobOut = tk.Text(self.frmJobOut, fg="white", bg="black", state=tk.DISABLED, yscrollcommand=self.jobOut_scr.set)
         self.jobOut.rowconfigure(0, weight=1)
         self.jobOut.columnconfigure(0, weight=1)
-        self.jobOut.grid(row=0, column=0, sticky=tk.N+tk.S+tk.W+tk.E)
+        self.jobOut.grid(row=0, column=0, sticky="news")
+
+        self.jobOut_scr.config(command=self.jobOut.yview)
+        self.jobOut_scr.rowconfigure(0, weight=1)
+        self.jobOut_scr.grid(row=0, column=1, sticky="news")
   
         # Terminal input #
         self.jobOutEntry = tk.Entry(self.jobOutput, fg="white", bg="#111111")
