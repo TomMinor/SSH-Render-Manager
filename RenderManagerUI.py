@@ -649,6 +649,9 @@ class ManagerUI(tk.Frame):
             if not job.completed:
                 shouldClose = tkmsg.askyesno('Verify', 'There are still running jobs, do you really want to quit?')
                 break
+            elif not hasattr(job, 'copied'):
+                shouldClose = tkmsg.askyesno('Verify', 'There are still jobs with uncopied files, do you really want to quit?')
+                break
         else:
             shouldClose=True
 
