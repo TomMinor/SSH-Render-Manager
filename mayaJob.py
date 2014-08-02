@@ -434,11 +434,17 @@ class Job:
 
   @property
   def cameraOverride(self):
-    return self._camOverride
+    if self._camOverride:
+      return self._camOverride
+    else:
+      return 'n/a'
 
   @property
   def resolutionOverride(self):
-    return self._resOverride
+    if self._resOverride:
+      return self._resOverride
+    else:
+      return ('n/a', 'n/a')
 
   @property
   def logPath(self):

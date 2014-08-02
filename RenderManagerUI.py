@@ -416,30 +416,38 @@ class ManagerUI(tk.Frame):
 
         btnPad = 3
 
+        rowCounter = 1
+
         # Host
         self.lblHost = tk.Label(self.jobInfo, text="Host Machine : ")
-        self.lblHost.grid(row=1, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.lblHost.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         self.jobInfo.rowconfigure(0, weight=1)
         self.entHost = tk.Entry(self.jobInfo, width=20, state=tk.DISABLED)
-        self.entHost.grid(row=1, column=1, sticky='NW')
+        self.entHost.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         # Exe path
         self.lblBinPath = tk.Label(self.jobInfo, text="Binary Path : ")
-        self.lblBinPath.grid(row=2, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.lblBinPath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         self.entBinPath = tk.Entry(self.jobInfo, width=20, state=tk.DISABLED)
-        self.entBinPath.grid(row=2, column=1, sticky='NW')
+        self.entBinPath.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         # Scene path
         self.lblScenePath = tk.Label(self.jobInfo, text="Scene Path : ")
-        self.lblScenePath.grid(row=3, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.lblScenePath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         self.entScenePath = tk.Entry(self.jobInfo, width=20, state=tk.DISABLED)
-        self.entScenePath.grid(row=3, column=1, sticky='NW')
+        self.entScenePath.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         # Frame range
         self.lblFrameRange = tk.Label(self.jobInfo, text="Frame range : ")
-        self.lblFrameRange.grid(row=4, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.lblFrameRange.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         self.frmFrameRange = tk.Frame(self.jobInfo)
-        self.frmFrameRange.grid(row=4, column=1, sticky='NW')
+        self.frmFrameRange.grid(row=rowCounter, column=1, sticky='NW')
 
         self.lblFrameRange_1 = tk.Label(self.frmFrameRange, text="Start:")
         self.lblFrameRange_1.grid(row=0, column=0, sticky='NE')
@@ -451,26 +459,60 @@ class ManagerUI(tk.Frame):
         self.entFrameRange_2 = tk.Entry(self.frmFrameRange, width=5, state=tk.DISABLED)
         self.entFrameRange_2.grid(row=0, column=3, sticky='NW')
 
+        rowCounter += 1
+
+        # Resolution override
+        self.lblResOverride = tk.Label(self.jobInfo, text="Resolution override : ")
+        self.lblResOverride.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.frmResOverride = tk.Frame(self.jobInfo)
+        self.frmResOverride.grid(row=rowCounter, column=1, sticky='NW')
+
+        self.lblResOverride_x = tk.Label(self.frmResOverride, text="Width:")
+        self.lblResOverride_x.grid(row=0, column=0, sticky='NE')
+        self.entResOverride_x = tk.Entry(self.frmResOverride, width=5, state=tk.DISABLED)
+        self.entResOverride_x.grid(row=0, column=1, sticky='NW')
+
+        self.lblResOverride_y = tk.Label(self.frmResOverride, text="Height:")
+        self.lblResOverride_y.grid(row=0, column=2, sticky='NE')
+        self.entResOverride_y = tk.Entry(self.frmResOverride, width=5, state=tk.DISABLED)
+        self.entResOverride_y.grid(row=0, column=3, sticky='NW')
+
+        rowCounter += 1
+
+        # Camera override 
+        self.lblCameraOverride = tk.Label(self.jobInfo, text="Camera override : ")
+        self.lblCameraOverride.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.entCameraOverride = tk.Entry(self.jobInfo, width=20, state=tk.DISABLED)
+        self.entCameraOverride.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
+
         # Output path
         self.lblOutputPath = tk.Label(self.jobInfo, text="Output Path (On remote host) : ")
-        self.lblOutputPath.grid(row=5, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        self.lblOutputPath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         self.entOutputPath = tk.Entry(self.jobInfo, width=20, state=tk.DISABLED)
-        self.entOutputPath.grid(row=5, column=1, sticky='NW')
+        self.entOutputPath.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         # Progress 
         self.lblCurrentFrame = tk.Label(self.jobInfo, text="Current Frame : ")
-        self.lblCurrentFrame.grid(row=6, column=0, sticky='N', padx=btnPad, pady=btnPad, columnspan=1)
+        self.lblCurrentFrame.grid(row=rowCounter, column=0, sticky='N', padx=btnPad, pady=btnPad, columnspan=1)
         self.entCurrentFrame = tk.Entry(self.jobInfo, width=20, state=tk.DISABLED)
-        self.entCurrentFrame.grid(row=6, column=1, sticky='NW')
+        self.entCurrentFrame.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         self.lblRenderProgress = tk.Label(self.jobInfo, text="Frame Progress : ")
-        self.lblRenderProgress.grid(row=7, column=0, sticky='N', padx=btnPad, pady=btnPad, columnspan=1)
+        self.lblRenderProgress.grid(row=rowCounter, column=0, sticky='N', padx=btnPad, pady=btnPad, columnspan=1)
 
         self.prgRenderProgressFrame = ttk.Progressbar(self.jobInfo, orient="horizontal", length=200, mode="determinate")
-        self.prgRenderProgressFrame.grid(row=7, column=1, sticky='W', columnspan=1)
+        self.prgRenderProgressFrame.grid(row=rowCounter, column=1, sticky='W', columnspan=1)
+
+        rowCounter += 1
 
         self.prgRenderProgress = ttk.Progressbar(self.jobInfo, orient="horizontal", length=400, mode="determinate")
-        self.prgRenderProgress.grid(row=8, column=0, sticky='W', columnspan=2)
+        self.prgRenderProgress.grid(row=rowCounter, column=0, sticky='W', columnspan=2)
 
         # Terminal output #
         self.jobOut = tk.Text(self.jobOutput, fg="white", bg="black", state=tk.DISABLED)
@@ -648,6 +690,9 @@ class ManagerUI(tk.Frame):
         modifyDisabledText(self.entFrameRange_1, str(job.frameRange[0]))
         modifyDisabledText(self.entFrameRange_2, str(job.frameRange[0]))
         modifyDisabledText(self.entOutputPath, job.outputPath)
+        modifyDisabledText(self.entCamOverride, job.cameraOverride)
+        modifyDisabledText(self.iResolutionOverride_1, job.ResolutionOverride[0])
+        modifyDisabledText(self.iResolutionOverride_2, job.ResolutionOverride[1])
         
     def onExit(self):
         for job in self.renderJobs:
