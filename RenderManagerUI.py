@@ -37,13 +37,13 @@ def secureCopy(host, src, dst, logger=None, limit=8912):
     command = 'scp -C -B -l %d %s:\"%s\" \"%s\"' % (limit, host, src, dst)
     try:
         scp = subprocess.Popen(command, shell=True).wait()
-    except OSError as e:
+    except OSError, e:
         if logger:
             logger.error('Command error : %s ' % command)
-            logger.error(e.message)
+            logger.error(e)
         else:
             print command
-            print e.message
+            print e
 
 def displayError(type_, msg, logger=None):
     output = 'Error %s : %s' % (type, msg)
@@ -182,8 +182,8 @@ class ManagerUI(tk.Frame):
                 else:
                     if not self.hosts:
                         raise IOError("Hosts file '%s' contains no hosts" % hostsDir)
-        except IOError as e:
-            displayError('File not found', e.message, self.logger)
+        except IOError, e:
+            displayError('File not found', e, self.logger)
 
         # Remove duplicates
         self.hosts = list(set(self.hosts))
@@ -645,7 +645,14 @@ class ManagerUI(tk.Frame):
         modifyDisabledText(self.entOutputPath, job.outputPath)
         
     def onExit(self):
-        if tkmsg.askyesno('Verify', 'There are still running jobs, do you really want to quit?'):
+        for job in self.renderJobs:
+            if not job.completed:
+                shouldClose = tkmsg.askyesno('Verify', 'There are still running jobs, do you really want to quit?')
+                break
+        else:
+            shouldClose=True
+
+        if shouldClose:
           for id, job in enumerate(self.renderJobs):
             self.cleanlyRemoveJob(id)
           self.onKill()
@@ -699,37 +706,45 @@ class ManagerUI(tk.Frame):
 
         btnPad=3
 
+        rowCounter = 1
+
         # Host
         lblHost = tk.Label(self.msgWin, text="Host Machine : ")
-        lblHost.grid(row=1, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        lblHost.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         self.msgWin.rowconfigure(0, weight=1)
 
         self.iHost = ttk.Combobox(self.msgWin, values=self.hosts)
-        self.iHost.grid(row=1, column=1, sticky='NW')
+        self.iHost.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         # Exe path
         lblBinPath = tk.Label(self.msgWin, text="Binary Path : ")
-        lblBinPath.grid(row=2, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        lblBinPath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
 
         self.iBinPath = tk.Entry(self.msgWin, width=20)
         self.iBinPath.bind("<Double-Button-1>", lambda event: self.getDirectory(self.iBinPath, self.msgWin))
-        self.iBinPath.grid(row=2, column=1, sticky='NW')
+        self.iBinPath.grid(row=rowCounter, column=1, sticky='NW')
         self.iBinPath.insert(0, self.defaults['binDir'])
+
+        rowCounter += 1
 
         # Scene path
         lblScenePath = tk.Label(self.msgWin, text="Scene Path : ")
-        lblScenePath.grid(row=3, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        lblScenePath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
 
         self.iScenePath = tk.Entry(self.msgWin, width=20)
         self.iScenePath.bind("<Double-Button-1>", lambda event: self.getFile(self.iScenePath, self.msgWin, 
                                                                 initialDir=os.path.split(self.workspacePath)[0]))
-        self.iScenePath.grid(row=3, column=1, sticky='NW')
+        self.iScenePath.grid(row=rowCounter, column=1, sticky='NW')
+
+        rowCounter += 1
 
         # Frame range
         lblFrameRange = tk.Label(self.msgWin, text="Frame range : ")
-        lblFrameRange.grid(row=4, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        lblFrameRange.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
         frmFrameRange = tk.Frame(self.msgWin)
-        frmFrameRange.grid(row=4, column=1, sticky='NW')
+        frmFrameRange.grid(row=rowCounter, column=1, sticky='NW')
 
         lblFrameRange_1 = tk.Label(frmFrameRange, text="Start:")
         lblFrameRange_1.grid(row=0, column=0, sticky='NE')
@@ -743,13 +758,17 @@ class ManagerUI(tk.Frame):
         self.iFrameRange_2.insert(0, self.defaults['frames'][1])
         self.iFrameRange_2.grid(row=0, column=3, sticky='NE')
 
+        rowCounter += 1
+
         # Output path
         lblOutputPath = tk.Label(self.msgWin, text="Output Path (On remote host) : ")
-        lblOutputPath.grid(row=5, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+        lblOutputPath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
 
         self.iOutputPath = tk.Entry(self.msgWin, width=20)
-        self.iOutputPath.grid(row=5, column=1, sticky='NW')
+        self.iOutputPath.grid(row=rowCounter, column=1, sticky='NW')
         modifyDisabledText(self.iOutputPath, self.defaults['outputDir'])
+
+        rowCounter += 1
 
         # Verify button #
         btnCheck = ttk.Button(self.msgWin, text="Ok", command=self.verifyNewJob)
