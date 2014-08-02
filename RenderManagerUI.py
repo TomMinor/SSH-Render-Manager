@@ -46,7 +46,7 @@ def secureCopy(host, src, dst, logger=None, limit=8912):
             print e
 
 def displayError(type_, msg, logger=None):
-    output = 'Error %s : %s' % (type, msg)
+    output = 'Error %s : %s' % (type_, msg)
     if logger:
         logger.error(output, exc_info=sys.exc_info())
     else:
@@ -84,7 +84,6 @@ def screensaverEnabled():
                             shell=True, 
                             stdout=subprocess.PIPE, 
                             stderr=subprocess.PIPE)
-    print query.wait()
     return query.wait()
 
 class ManagerUI(tk.Frame):
@@ -195,8 +194,8 @@ class ManagerUI(tk.Frame):
         self.defaults = {}
         self.defaults['binDir'] = '/opt/autodesk/maya2014-x64/bin/Render'
         self.defaults['outputDir'] = outputDir
-        self.defaults['camOverride'] = outputDir
-        self.defaults['outputDir'] = outputDir
+        self.defaults['camOverride'] = 'persp'
+        self.defaults['resolutionOverride'] = (640, 480)
         self.defaults['frames'] = (0, 0)
 
         #self.logger.debug('Defaults \n %s' % json.dumps(self.defaults, indent=3))
@@ -557,7 +556,13 @@ class ManagerUI(tk.Frame):
 
         self.logger.info('Adding job : \n %s' % json.dumps(args, indent=3))
 
-        self.renderJobs.append( mayaJob.Job(**args) )
+        try:
+            newJob = mayaJob.Job(**args) 
+        except IOError, e:
+            self.logger.error(e)
+           # return
+
+        self.renderJobs.append( newJob)
         self.jobListbox_list.insert(tk.END, str(self.renderJobs[-1]))
         self.jobListbox_list.selection_clear(0, tk.END)
         self.jobListbox_list.select_set(tk.END)
@@ -763,6 +768,50 @@ class ManagerUI(tk.Frame):
 
         rowCounter += 1
 
+        # Camera override
+        self.varCameraOverride = tk.IntVar()
+        chkCamOverride = tk.Checkbutton(self.msgWin, 
+                                        text='Camera override : ', 
+                                        variable = self.varCameraOverride, 
+                                        command=self.onCamOverrideToggle)
+        chkCamOverride.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+
+        self.entCamOverride = tk.Entry(self.msgWin)
+        self.entCamOverride.grid(row=rowCounter, column=1, sticky='NW', padx=btnPad, pady=btnPad)
+        modifyDisabledText(self.entCamOverride, self.defaults['camOverride'])
+
+        self.onCamOverrideToggle()
+
+        rowCounter += 1
+
+        # Resolution override
+        self.varResolutionOverride = tk.IntVar()
+        chkResolutionOverride = tk.Checkbutton(self.msgWin, 
+                                                text='Resolution override : ', 
+                                                variable = self.varResolutionOverride, 
+                                                command=self.onResOverrideToggle)
+        chkResolutionOverride.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
+
+        frmResolutionOverride = tk.Frame(self.msgWin)
+        frmResolutionOverride.grid(row=rowCounter, column=1, sticky='NW')
+
+        lblResolutionOverride_1 = tk.Label(frmResolutionOverride, text="Width:")
+        lblResolutionOverride_1.grid(row=0, column=0, sticky='NE')
+        lblResolutionOverride_2 = tk.Label(frmResolutionOverride, text="Height:")
+        lblResolutionOverride_2.grid(row=0, column=2, sticky='NE')
+
+        self.iResolutionOverride_1 = tk.Entry(frmResolutionOverride, width=5)
+        modifyDisabledText(self.iResolutionOverride_1, self.defaults['resolutionOverride'][0])
+        self.iResolutionOverride_1.grid(row=0, column=1, sticky='NE')
+
+        self.iResolutionOverride_2 = tk.Entry(frmResolutionOverride, width=5)
+        modifyDisabledText(self.iResolutionOverride_2, self.defaults['resolutionOverride'][1])
+        self.iResolutionOverride_2.grid(row=0, column=3, sticky='NE')
+
+        self.onResOverrideToggle()
+
+        rowCounter += 1
+
         # Output path
         lblOutputPath = tk.Label(self.msgWin, text="Output Path (On remote host) : ")
         lblOutputPath.grid(row=rowCounter, column=0, sticky='NE', padx=btnPad, pady=btnPad)
@@ -775,7 +824,24 @@ class ManagerUI(tk.Frame):
 
         # Verify button #
         btnCheck = ttk.Button(self.msgWin, text="Ok", command=self.verifyNewJob)
-        btnCheck.grid(row=6, column=0, columnspan=2, sticky='N')
+        btnCheck.grid(row=rowCounter, column=0, columnspan=2, sticky='N')
+
+    def onCamOverrideToggle(self):
+        if self.varCameraOverride.get():
+            self.entCamOverride.config(state='normal')
+        else:
+            self.entCamOverride.config(state='disabled')
+            modifyDisabledText(self.entCamOverride, self.defaults['camOverride'])
+
+    def onResOverrideToggle(self):
+        if self.varResolutionOverride.get():
+            self.iResolutionOverride_1.config(state='normal')
+            self.iResolutionOverride_2.config(state='normal')
+        else:
+            self.iResolutionOverride_1.config(state='disabled')
+            self.iResolutionOverride_2.config(state='disabled')
+            modifyDisabledText(self.iResolutionOverride_1, self.defaults['resolutionOverride'][0])
+            modifyDisabledText(self.iResolutionOverride_2, self.defaults['resolutionOverride'][1])
 
     def verifyNewJob(self):
         args = { 'host' : self.iHost.get(),
@@ -784,27 +850,54 @@ class ManagerUI(tk.Frame):
                  'frameRange' : [self.iFrameRange_1.get(),self.iFrameRange_2.get()],
                  'outputPath' : self.iOutputPath.get() }
 
+        if self.varCameraOverride.get():
+            args['camOverride'] = self.entCamOverride.get()
+
+        if self.varResolutionOverride.get():
+            args['resolutionOverride'] = [self.iResolutionOverride_1.get(), self.iResolutionOverride_2.get()]
+
         if not verifyHost(args['host']):
             displayError('Host error', 'Please enter valid host', self.logger)
             return
 
-        for index, type in [(0, 'start'), (1, 'end')]:
-          print index, type
+        if not os.path.exists(args['scenePath']):
+            displayError('Host error', 'Please enter a valid scene file', self.logger)
+            return
+
+        # Check frame range
+        for index, type_ in [(0, 'start'), (1, 'end')]:
           if not args['frameRange'][index]:
-              displayError('Invalid setting', 'Please enter %s frame' % type, self.logger)
+              displayError('Invalid setting', 'Please enter %s frame' % type_, self.logger)
               return
           else:
               try:
                 args['frameRange'][index] = int(args['frameRange'][index])
                 if args['frameRange'][index] < 0:
-                  displayError('Invalid setting', 'Please enter a positive %s frame' % type, self.logger)
+                  displayError('Invalid setting', 'Please enter a positive %s frame' % type_, self.logger)
                   return
               except ValueError:
-                displayError('Invalid setting', 'Please enter a valid %s frame' % type, self.logger)
+                displayError('Invalid setting', 'Please enter a valid %s frame' % type_, self.logger)
                 return
-        if args['frameRange'][1] - args['frameRange'][0] < 0:
-          displayError('Invalid setting', 'Please enter a positive frame range', self.logger)
-          return
+
+        if 'resolutionOverride' in args:
+            # Check resolution override
+            for index, type_ in [(0, 'width'), (1, 'height')]:
+                if not args['resolutionOverride'][index]:
+                    displayError('Invalid setting', 'Please enter %s  ' % type_, self.logger)
+                    return
+                else:
+                    try:
+                        args['resolutionOverride'][index] = int(args['resolutionOverride'][index])
+                        if args['resolutionOverride'][index] < 0:
+                            displayError('Invalid setting', 'Please enter a positive %s' % type_, self.logger)
+                            return
+                    except ValueError:
+                        displayError('Invalid setting', 'Please enter a valid %s' % type_, self.logger)
+                        return
+
+            if args['frameRange'][1] - args['frameRange'][0] < 0:
+                displayError('Invalid setting', 'Please enter a positive frame range', self.logger)
+                return
             
         for arg in args:
             if arg != 'frameRange' and not args[arg]:

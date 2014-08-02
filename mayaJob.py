@@ -86,8 +86,11 @@ class Job:
         os.makedirs(logPath)
 
       self._jobLogFile = os.path.join(logPath, logName)
-      with open(self._jobLogFile, 'w') as f:
-        f.write('')
+      try:
+        with open(self._jobLogFile, 'w') as f:
+          f.write('')
+      except IOError, e:
+        raise
         
     handler = logging.FileHandler(self._jobLogFile)
     self.logger.addHandler(handler)
@@ -125,8 +128,11 @@ class Job:
 
     self._logPath = os.path.join(logDir, logFile)
 
-    with open(self._logPath, 'w') as f:
-      f.write('')
+    try:
+      with open(self._logPath, 'w') as f:
+        f.write('')
+    except IOError:
+      raise
 
     self.logger.debug('Maya job log path: %s' % self._logPath)
 
@@ -134,15 +140,18 @@ class Job:
     self.logger.debug('Session user : %s' % self._user)
 
     self.logger.debug('Parsing scene file for output prefix...')
-    with open(os.path.expanduser(self.scenePath)) as f:
-        for line in f:
-          if 'setAttr ".ifp" -type "string"' in line:
-            self.outputPrefix = line.split('"')[-2]
-            self.logger.debug('File name prefix found, using %s' % self.outputPrefix)
-            break
-        else:
-          self.outputPrefix = os.path.splitext(os.path.basename(self.scenePath))[0]
-          self.logger.debug('File name prefix not set, using scene name (%s)' % self.outputPrefix)
+    try:
+      with open(os.path.expanduser(self.scenePath)) as f:
+          for line in f:
+            if 'setAttr ".ifp" -type "string"' in line:
+              self.outputPrefix = line.split('"')[-2]
+              self.logger.debug('File name prefix found, using %s' % self.outputPrefix)
+              break
+          else:
+            self.outputPrefix = os.path.splitext(os.path.basename(self.scenePath))[0]
+            self.logger.debug('File name prefix not set, using scene name (%s)' % self.outputPrefix)
+    except IOError:
+      raise
 
     self._processArgs = []
 
@@ -220,14 +229,20 @@ class Job:
       self._currentFrame = self._maxFrame
 
       self._output = []
-      with open(self._logPath) as logFile:
-        for line in logFile:
-          self._output.append(line.strip())
+      try:
+        with open(self._logPath) as logFile:
+          for line in logFile:
+            self._output.append(line.strip())
+      except IOError, e:
+        self.logger.error(e)
     else:
       self.__setState('e')
       if self._errorCode != None:
-        with open(self._logPath) as logFile:
-          self.parseErrorcode([line for line in logFile])
+        try:
+          with open(self._logPath) as logFile:
+            self.parseErrorcode([line for line in logFile])
+        except IOError, e:
+          self.logger.error(e)
 
     self.close()
 
@@ -271,16 +286,19 @@ class Job:
             except Exception:
               pass
 
-            with open(self._logPath, 'a+') as mayaLog:
-              mayaLog.write(tmp)
+            try:
+              with open(self._logPath, 'a+') as mayaLog:
+                mayaLog.write(tmp)
+            except IOError, e:
+              self.logger.error(e)
 
             self.logger.error('Prematurely exited process')
             self.__onComplete(success=False)
             break
-        except TIMEOUT as e:
+        except TIMEOUT, e:
           pass
-        except ValueError as e:
-          self.logger.error(e.message)
+        except ValueError, e:
+          self.logger.error(e)
           self.__onComplete(success=False)
           break
     
@@ -290,14 +308,14 @@ class Job:
     if not self.completed():
       try:
         self._sshOutput += str(self.process.read_nonblocking()) 
-      except TIMEOUT as e:
-        self.logger.error(e.message)
-      except ValueError as e:
-        self.logger.error(e.message)
+      except TIMEOUT, e:
+        self.logger.debug(e)
+      except ValueError, e:
+        self.logger.error(e)
         self.__setState('e')
         return
-      except EOF as e:
-        self.logger.error(e.message)
+      except EOF, e:
+        self.logger.error(e)
         self.__setState('e')
         return
       
