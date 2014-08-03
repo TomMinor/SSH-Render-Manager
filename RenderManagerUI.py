@@ -18,7 +18,8 @@ import json
 
 from threading import Timer
 
-import mayaJob
+#import mayaJob
+import dummyJob as mayaJob
 
 """
 Not the most readable code in places, but it works for what it is.
@@ -254,14 +255,14 @@ class ManagerUI(tk.Frame):
             elif job.state == 'Idle':     pass
 
         for select in selection:
-            self.jobListbox_list.select_set(select[0])
+            self.jobListbox_list.select_set(select)
 
         if self.selectedJobID != -1:
             job = self.renderJobs[self.selectedJobID]
 
             if self.lastOutput != job.output:
                 logOutput = ''.join([ '%s\n' % line for line in job.output ])
-                modifyDisabledText(self.jobOut, logOutput, startCursor='1.0')
+                modifyDisabledText(self.jobOut, logOutput, colour='#FFFFFF', multiLine=True, startCursor='1.0')
                 self.lastOutput = job.output
 
                 modifyDisabledText(self.entCurrentFrame, job.currentFrame)
@@ -701,9 +702,9 @@ class ManagerUI(tk.Frame):
         modifyDisabledText(self.entFrameRange_1, str(job.frameRange[0]))
         modifyDisabledText(self.entFrameRange_2, str(job.frameRange[0]))
         modifyDisabledText(self.entOutputPath, job.outputPath)
-        modifyDisabledText(self.entCamOverride, job.cameraOverride)
-        modifyDisabledText(self.iResolutionOverride_1, job.ResolutionOverride[0])
-        modifyDisabledText(self.iResolutionOverride_2, job.ResolutionOverride[1])
+        modifyDisabledText(self.entCameraOverride, job.cameraOverride)
+        modifyDisabledText(self.entResOverride_x, job.resolutionOverride[0])
+        modifyDisabledText(self.entResOverride_y, job.resolutionOverride[1])
         
     def onExit(self):
         for job in self.renderJobs:
@@ -912,11 +913,11 @@ class ManagerUI(tk.Frame):
         if self.varResolutionOverride.get():
             args['resolutionOverride'] = [self.iResolutionOverride_1.get(), self.iResolutionOverride_2.get()]
 
-        if not verifyHost(args['host']):
+        if False and not verifyHost(args['host']):
             displayError('Host error', 'Please enter valid host', self.logger)
             return
 
-        if not os.path.exists(args['scenePath']):
+        if False and not os.path.exists(args['scenePath']):
             displayError('Host error', 'Please enter a valid scene file', self.logger)
             return
 
