@@ -614,7 +614,7 @@ class ManagerUI(tk.Frame):
             newJob = mayaJob.Job(**args) 
         except IOError, e:
             self.logger.error(e)
-           # return
+            return
 
         self.renderJobs.append( newJob)
         self.jobListbox_list.insert(tk.END, str(self.renderJobs[-1]))
