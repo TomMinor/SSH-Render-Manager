@@ -387,6 +387,10 @@ class Job:
         self.process.kill(9) #SIGKILL
         self._state = 'e' if self.errorCode else 'c'
     else:
+        try:
+          self.process.kill(9) #SIGKILL
+        except Exception, e:
+          self.logger.error(e)
         self._state = 'e' if self.errorCode else 'c'
 
   def close(self):
