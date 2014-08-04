@@ -18,8 +18,8 @@ import json
 
 from threading import Timer
 
-#import mayaJob
-import dummyJob as mayaJob
+import mayaJob
+#import dummyJob as mayaJob
 
 """
 Not the most readable code in places, but it works for what it is.
