@@ -609,7 +609,7 @@ class ManagerUI(tk.Frame):
         args = locals()
         args.pop('self', None)
 
-        logName = os.path.join('~/.rendermanager', 'jobLogs')
+        logName = os.path.join(ManagerUI.APPDIR, 'jobLogs')
         if not os.path.exists(logName):
           os.makedirs(logName)
 
@@ -686,8 +686,8 @@ class ManagerUI(tk.Frame):
           self.logger.info('Removing job log file %s' % jobLogFile)
           self.logger.info('Removing maya log file %s' % mayaLogFile)
 
-          os.remove(jobLogFile)
-          os.remove(mayaLogFile)
+          #os.remove(jobLogFile)
+          #os.remove(mayaLogFile)
         else:
           self.logger.info('Job did not end successfully, preserving logs')
 
