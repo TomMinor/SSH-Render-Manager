@@ -189,6 +189,7 @@ class ManagerUI(tk.Frame):
         self.hosts = list(set(self.hosts))
 
         self.renderJobs = []
+        self.renderQueue = {}
         self.selectedJobID = -1
         self.lastOutput = []
         
@@ -281,17 +282,24 @@ class ManagerUI(tk.Frame):
 
     def update(self):
         if not self.shouldExit:
-            if self.renderJobs:
-                for job in self.renderJobs:
-                    if not job.completed():
-                        if True and not self.runningJobsOnHost(job):
-                            try:
-                                self.logger.info('Starting next job on host %s' % job.host)
-                                job.run()
-                            except IOError:
-                                job.close()
-                                displayError('Update job', 'Cannot start job', self.logger)
-                        job.update()
+            for host in self.renderQueue:
+                if self.renderQueue[host]:
+                    topJob = self.renderQueue[host][0]
+                    if not topJob.running:
+                        try:
+                            self.logger.info('Starting next job on host %s' % topJob.host)
+                            topJob.run()
+                        except IOError:
+                            topJob.close()
+                            displayError('Update job', 'Cannot start job on %s' % topJob.host, self.logger)
+                            self.renderQueue[host].pop()
+                    elif topJob.completed():
+                        self.logger.info('Popping finished job off queue on %s' % host)
+                        self.renderQueue[host].pop()
+            
+            for job in self.renderJobs:
+                if not job.completed():
+                    job.update()
                         
             self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
         else:
@@ -616,7 +624,18 @@ class ManagerUI(tk.Frame):
             self.logger.error(e)
             return
 
-        self.renderJobs.append( newJob)
+        self.renderJobs.append(newJob)
+        if newJob.host in self.renderQueue:
+            self.renderQueue[newJob.host].append(newJob)
+        else:
+            self.renderQueue[newJob.host] = [newJob]
+
+        print newJob.state
+        print newJob.running
+        print newJob.completed()
+
+        time.sleep(5)
+
         self.jobListbox_list.insert(tk.END, str(self.renderJobs[-1]))
         self.jobListbox_list.selection_clear(0, tk.END)
         self.jobListbox_list.select_set(tk.END)

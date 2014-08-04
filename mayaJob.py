@@ -191,7 +191,7 @@ class Job:
 
     self._processCall = " ".join(self._processCall)
 
-    print self._processCall
+    self.logger.debug('Process call : %s' % self._processCall)
     
     self._output = []
     self._sshOutput = '' 
