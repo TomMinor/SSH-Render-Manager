@@ -18,7 +18,8 @@ import json
 
 from threading import Timer
 
-import mayaJob
+#import mayaJob
+import dummyJob as mayaJob
 
 """
 Not the most readable code in places, but it works for what it is.
@@ -122,11 +123,17 @@ class ManagerUI(tk.Frame):
         self.logger.addHandler(handler)
 
         self.logger.info('======= Starting render manager =======')
+        self.logger.info('Using log path %s' % mainLogPath)
 
         self.workspacePath = tkfile.askopenfilename( **{ 
           'filetypes':[('Maya workspace files', '.mel')],
           'initialdir':os.path.expanduser('~'),
           'title':'Select project workspace file' })
+
+        if not self.workspacePath:
+            displayError('Error', "No workspace file specified", self.logger)
+            sys.exit(1)
+
 
         self.logger.info('Loading workspace from user directory %s' % self.workspacePath)
 
