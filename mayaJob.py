@@ -169,7 +169,7 @@ class Job:
     # Verbose output
     self._processArgs.append( ('v', '5') )
     self._processArgs.append( ('verb', '') )
-    self._processArgs.append( ('rep', '') )
+    #self._processArgs.append( ('rep', '') ) # Apparently doesn't exist
     
     # Force renderer to mental ray
     self._processArgs.append( ('r', 'mr') )  
