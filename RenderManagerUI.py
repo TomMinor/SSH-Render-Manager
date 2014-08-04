@@ -272,7 +272,8 @@ class ManagerUI(tk.Frame):
             if self.lastOutput != job.output:
                 logOutput = ''.join([ '%s\n' % line for line in job.output ])
                 modifyDisabledText(self.jobOut, logOutput, colour='#FFFFFF', multiLine=True, startCursor='1.0')
-                self.jobOut.config(state='readonly') self.lastOutput = job.output modifyDisabledText(self.entCurrentFrame, job.currentFrame)
+                self.jobOut.config(state='readonly') 
+                self.lastOutput = job.output modifyDisabledText(self.entCurrentFrame, job.currentFrame)
                 self.prgRenderProgressFrame["value"] = job.frameProgress
                 self.prgRenderProgress["value"] = job.progress
 
