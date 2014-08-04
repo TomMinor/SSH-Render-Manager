@@ -305,6 +305,9 @@ class Job:
       self.__setState('r')
 
   def update(self):
+    if not self.process.isalive():
+        self.__onComplete(success=False)
+
     if not self.completed():
       try:
         self._sshOutput += str(self.process.read_nonblocking()) 
@@ -382,6 +385,8 @@ class Job:
     if self._state == 'r':
         self.logger.info("Killing %s" % self._binPath)
         self.process.kill(9) #SIGKILL
+        self._state = 'e' if self.errorCode else 'c'
+    else:
         self._state = 'e' if self.errorCode else 'c'
 
   def close(self):
