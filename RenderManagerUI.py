@@ -239,6 +239,7 @@ class ManagerUI(tk.Frame):
                 self.logger.debug('User is active, decreasing update thread delay to %f' % ManagerUI.SCREENSAVER_OFF_DELAY)
                 ManagerUI.updateThreadDelay = ManagerUI.SCREENSAVER_OFF_DELAY
                 if self.updateThread: 
+                    self.logger.debug('Restarting update thread...')
                     self.updateThread.cancel()
                 self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
         else:
@@ -246,6 +247,7 @@ class ManagerUI(tk.Frame):
                 self.logger.debug('User is inactive, increasing update thread delay to %f' % ManagerUI.SCREENSAVER_ON_DELAY)
                 ManagerUI.updateThreadDelay = ManagerUI.SCREENSAVER_ON_DELAY
                 if self.updateThread: 
+                    self.logger.debug('Restarting update thread...')
                     self.updateThread.cancel()
                 self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
 
@@ -270,9 +272,7 @@ class ManagerUI(tk.Frame):
             if self.lastOutput != job.output:
                 logOutput = ''.join([ '%s\n' % line for line in job.output ])
                 modifyDisabledText(self.jobOut, logOutput, colour='#FFFFFF', multiLine=True, startCursor='1.0')
-                self.lastOutput = job.output
-
-                modifyDisabledText(self.entCurrentFrame, job.currentFrame)
+                self.jobOut.config(state='readonly') self.lastOutput = job.output modifyDisabledText(self.entCurrentFrame, job.currentFrame)
                 self.prgRenderProgressFrame["value"] = job.frameProgress
                 self.prgRenderProgress["value"] = job.progress
 
@@ -291,6 +291,8 @@ class ManagerUI(tk.Frame):
             for host in self.renderQueue:
                 if self.renderQueue[host]:
                     topJob = self.renderQueue[host][0]
+                    self.logger.debug('Current job on %s : %s' % (host, str(topJob)))
+
                     if not topJob.running:
                         try:
                             self.logger.info('Starting next job on host %s' % topJob.host)
@@ -938,11 +940,11 @@ class ManagerUI(tk.Frame):
         if self.varResolutionOverride.get():
             args['resolutionOverride'] = [self.iResolutionOverride_1.get(), self.iResolutionOverride_2.get()]
 
-        if False and not verifyHost(args['host']):
+        if not verifyHost(args['host']):
             displayError('Host error', 'Please enter valid host', self.logger)
             return
 
-        if False and not os.path.exists(args['scenePath']):
+        if not os.path.exists(args['scenePath']):
             displayError('Host error', 'Please enter a valid scene file', self.logger)
             return
 
