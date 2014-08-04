@@ -272,7 +272,7 @@ class ManagerUI(tk.Frame):
             if self.lastOutput != job.output:
                 logOutput = ''.join([ '%s\n' % line for line in job.output ])
                 modifyDisabledText(self.jobOut, logOutput, colour='#FFFFFF', multiLine=True, startCursor='1.0')
-                self.jobOut.config(state='readonly')
+                self.jobOut.config(state='normal')
                 self.lastOutput = job.output
 
                 modifyDisabledText(self.entCurrentFrame, job.currentFrame)
