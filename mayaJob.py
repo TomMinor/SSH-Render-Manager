@@ -234,7 +234,7 @@ class Job:
           for line in logFile:
             self._output.append(line.strip())
       except IOError, e:
-        self.logger.error(e)
+        self.logger.error(e, exc_info=sys.exc_info())
     else:
       self.__setState('e')
       if self._errorCode != None:
@@ -242,7 +242,7 @@ class Job:
           with open(self._logPath) as logFile:
             self.parseErrorcode([line for line in logFile])
         except IOError, e:
-          self.logger.error(e)
+          self.logger.error(e, exc_info=sys.exc_info())
 
     self.close()
 
@@ -290,7 +290,7 @@ class Job:
               with open(self._logPath, 'a+') as mayaLog:
                 mayaLog.write(tmp)
             except IOError, e:
-              self.logger.error(e)
+              self.logger.error(e, exc_info=sys.exc_info())
 
             self.logger.error('Prematurely exited process')
             self.__onComplete(success=False)
@@ -298,7 +298,7 @@ class Job:
         except TIMEOUT, e:
           pass
         except ValueError, e:
-          self.logger.error(e)
+          self.logger.error(e, exc_info=sys.exc_info())
           self.__onComplete(success=False)
           break
     
@@ -312,14 +312,14 @@ class Job:
       try:
         self._sshOutput += str(self.process.read_nonblocking()) 
       except TIMEOUT, e:
-        self.logger.debug(e)
+        self.logger.debug(e, exc_info=sys.exc_info())
       except ValueError, e:
         self.logger.error(e)
-        self.__setState('e')
+        self.__setState('e', exc_info=sys.exc_info())
         return
       except EOF, e:
         self.logger.error(e)
-        self.__setState('e')
+        self.__setState('e', exc_info=sys.exc_info())
         return
       
       sshOutputNew = self._sshOutput.split('\n')
@@ -366,7 +366,7 @@ class Job:
                 else:
                     self.__setProgress(100.0)
       except IOError, e:
-        self.logger.error(e.message)
+        self.logger.error(e.message, exc_info=sys.exc_info())
 
   def pause(self):
     if not self._state == 'p':
@@ -384,13 +384,13 @@ class Job:
     self.resume()
     if self._state == 'r':
         self.logger.info("Killing %s" % self._binPath)
+        # I know using both is redundant but we want to be sure all child processes die too
+        self.process.kill(2) #SIGINT
         self.process.kill(9) #SIGKILL
         self._state = 'e' if self.errorCode else 'c'
     else:
-        try:
-          self.process.kill(9) #SIGKILL
-        except Exception, e:
-          self.logger.error(e)
+        # Even if the process hasn't started running properly, try to kill it anyway
+        self.process.kill(9) #SIGKILL
         self._state = 'e' if self.errorCode else 'c'
 
   def close(self):
@@ -403,15 +403,15 @@ class Job:
     try:
         self.process.logout()
     except OSError as e:
-        self.logger.error(e.message)
+        self.logger.error(e.message, exc_info=sys.exc_info())
     except ValueError as e:
-        self.logger.error(e.message)
+        self.logger.error(e.message, exc_info=sys.exc_info())
 
     try:
         with open(self._logPath, 'r') as mayaLog:
             self._output = [ line for line in mayaLog ]
     except IOError as e:
-        self.logger.error(e.message)
+        self.logger.error(e.message, exc_info=sys.exc_info())
 
     self.process.close(force=True)
 
@@ -419,7 +419,7 @@ class Job:
     return Job(**self.originalArgs)
 
   def completed(self):
-    return (self._state == 'c' or self._state == 'e')
+    return (self._state == 'c' or self._state == 'e') or (not self.process.isalive())
 
   @property
   def host(self):
