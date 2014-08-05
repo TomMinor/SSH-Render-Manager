@@ -61,7 +61,7 @@ class Job:
       }
 
   ERROR = {
-      0 : 'Success'
+      0 : 'Success',
       256 : 'Login failed'
       }
 
