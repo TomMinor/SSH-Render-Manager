@@ -253,7 +253,7 @@ class Job:
           for line in logFile:
             self._output.append(line.strip())
       except IOError, e:
-        self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
     else:
       self.__setState('e')
       if self._errorCode != None or self._errorCode != 256:
@@ -261,7 +261,7 @@ class Job:
           with open(self._logPath) as logFile:
             self.parseErrorcode([line for line in logFile])
         except IOError, e:
-          self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
+          self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
     self.close()
 
@@ -309,7 +309,7 @@ class Job:
               with open(self._logPath, 'a+') as mayaLog:
                 mayaLog.write(tmp)
             except IOError, e:
-              self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
+              self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
             self.logger.error('Prematurely exited process')
             self.__onComplete(success=False)
@@ -317,7 +317,7 @@ class Job:
         except TIMEOUT, e:
           pass
         except ValueError, e:
-          self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
+          self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
           self.__onComplete(success=False)
           break
     
@@ -331,13 +331,13 @@ class Job:
       try:
         self._sshOutput += str(self.process.read_nonblocking()) 
       except TIMEOUT, e:
-        self.logger.debug('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
+        self.logger.debug('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
       except ValueError, e:
-        self.logger.error('{0] {1}'.format(repr(self), e))
+        self.logger.error('{0} {1}'.format(repr(self), e))
         self.__setState('e', exc_info=sys.exc_info())
         return
       except EOF, e:
-        self.logger.error('{0] {1}'.format(repr(self), e))
+        self.logger.error('{0} {1}'.format(repr(self), e))
         self.__setState('e', exc_info=sys.exc_info())
         return
       
@@ -385,7 +385,7 @@ class Job:
                 else:
                     self.__setProgress(100.0)
       except IOError, e:
-        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
 
   def pause(self):
     if not self._state == 'p':
@@ -426,15 +426,15 @@ class Job:
     try:
         self.process.logout()
     except OSError as e:
-        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
     except ValueError as e:
-        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
 
     try:
         with open(self._logPath, 'r') as mayaLog:
             self._output = [ line for line in mayaLog ]
     except IOError as e:
-        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
 
     self.process.close(force=True)
 
