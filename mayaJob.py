@@ -87,14 +87,14 @@ class Job:
       logName = os.path.join('%s@%s_%s.log' % (os.path.basename(scenePath), host, self._id) )
       logPath = os.path.expanduser(logPath)
       if not os.path.exists(logPath):
-        info.logger.debug('Making log directory for job@%s in %s' % (host, logPath))
+        self.logger.debug('Making log directory for job@%s in %s' % (host, logPath))
         os.makedirs(logPath)
 
       self._jobLogFile = os.path.join(logPath, logName)
       try:
         with open(self._jobLogFile, 'w') as f:
           f.write('')
-        info.logger.debug('Job@%s log path : %s' % (host, self._jobLogFile))
+        self.logger.debug('Job@%s log path : %s' % (host, self._jobLogFile))
       except IOError, e:
         raise
         
