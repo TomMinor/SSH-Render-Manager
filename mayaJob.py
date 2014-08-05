@@ -221,7 +221,7 @@ class Job:
 
   def __repr__(self):
     return '<{uid}> Host:{host} | Scene:{scene} | Frames:{framecount} | Errorcode:{error} | Status:{status}'.format(
-        uid=self._id
+        uid=self._id,
         host=self.host,
         scene=os.path.basename(self._scenePath),
         framecount=self.totalFrames,
