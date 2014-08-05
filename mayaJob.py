@@ -134,6 +134,8 @@ class Job:
     except IOError:
       raise
 
+    self.logger.info('Initialising job on %s' % self.host)
+
     self.logger.debug('Maya job log path: %s' % self._logPath)
 
     self._user = user if user else getpass.getuser() 
@@ -383,13 +385,14 @@ class Job:
   def kill(self):
     self.resume()
     if self._state == 'r':
-        self.logger.info("Killing %s" % self._binPath)
+        self.logger.info("Killing %s on %s" % (self._binPath, self.host))
         # I know using both is redundant but we want to be sure all child processes die too
         self.process.kill(2) #SIGINT
         self.process.kill(9) #SIGKILL
         self._state = 'e' if self.errorCode else 'c'
     else:
         # Even if the process hasn't started running properly, try to kill it anyway
+        self.logger.info('Attempting kill with no running process on %s' % self.host)
         self.process.kill(9) #SIGKILL
         self._state = 'e' if self.errorCode else 'c'
 
@@ -416,6 +419,7 @@ class Job:
     self.process.close(force=True)
 
   def getNewInstanceofJob(self):
+    self.logging.info('Returning new instance of job on %s' % self.host, exc_infosys.exc_info())
     return Job(**self.originalArgs)
 
   def completed(self):

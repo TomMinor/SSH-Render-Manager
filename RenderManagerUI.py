@@ -292,6 +292,7 @@ class ManagerUI(tk.Frame):
     def update(self):
         if not self.shouldExit:
             for host in self.renderQueue:
+                self.logger.debug('Updating first job on host %s' % host)
                 if self.renderQueue[host]:
                     topJob = self.renderQueue[host][0]
                     self.logger.debug('Current job on %s : %s' % (host, str(topJob)))
@@ -309,7 +310,9 @@ class ManagerUI(tk.Frame):
                         self.renderQueue[host].pop()
             
             for job in self.renderJobs:
+                self.logger.debug('Checking if job %s completed...' % str(job))
                 if not job.completed():
+                    self.logger.debug('Not completed, updating')
                     job.update()
                         
             self.updateThread = Timer(ManagerUI.updateThreadDelay, self.update).start()
@@ -632,7 +635,7 @@ class ManagerUI(tk.Frame):
         try:
             newJob = mayaJob.Job(**args) 
         except IOError, e:
-            self.logger.error(e)
+            self.logger.error(e, exc_info=sys.exc_info())
             return
 
         self.renderJobs.append(newJob)
@@ -641,11 +644,9 @@ class ManagerUI(tk.Frame):
         else:
             self.renderQueue[newJob.host] = [newJob]
 
-        print newJob.state
-        print newJob.running
-        print newJob.completed()
-
-        time.sleep(5)
+        self.logger.debug('New job state > %s' % newJob.state)
+        self.logger.debug('New job is running? %s' % newJob.running)
+        self.logger.debug('New job is complete? %s' % newJob.completed())
 
         self.jobListbox_list.insert(tk.END, str(self.renderJobs[-1]))
         self.jobListbox_list.selection_clear(0, tk.END)
