@@ -228,7 +228,7 @@ class Job:
         status=self._state)
 
   def __setState(self, state):
-    if self._state 
+    if self._state:
       self.logger.debug(("{0} %s -> %s" % (Job.STATE[self._state], Job.STATE[state])).format(repr(self)))
     else:
       self.logger.debug(("{0} Setting initial state to %s" % Job.STATE[state]).format(repr(self)))
