@@ -392,7 +392,7 @@ class Job:
                 else:
                     self.__setProgress(100.0)
       except IOError, e:
-        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
   def pause(self):
     if not self._state == 'p':
@@ -433,15 +433,15 @@ class Job:
     try:
         self.process.logout()
     except OSError as e:
-        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
     except ValueError as e:
-        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
     try:
         with open(self._logPath, 'r') as mayaLog:
             self._output = [ line for line in mayaLog ]
     except IOError as e:
-        self.logger.error('{0} {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
+        self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
     self.process.close(force=True)
 
