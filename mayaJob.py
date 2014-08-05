@@ -84,7 +84,7 @@ class Job:
 
     self.logger = logging.getLogger(__name__)
     if logPath != None:
-      logName = os.path.join('%s@%s_%s.log' % (os.path.basename(scenePath), host, self._id) ))
+      logName = os.path.join('%s@%s_%s.log' % (os.path.basename(scenePath), host, self._id) )
       logPath = os.path.expanduser(logPath)
       if not os.path.exists(logPath):
         info.logger.debug('Making log directory for job@%s in %s' % (host, logPath))
