@@ -311,15 +311,22 @@ class Job:
             except IOError, e:
               self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
-            self.logger.error('Prematurely exited process')
+            self.logger.error(('{0} Prematurely exited process').format(repr(self)))
             self.__onComplete(success=False)
             break
         except TIMEOUT, e:
-          pass
+          self.logger.info('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
+          self.logger.info('{0} {1}'.format(repr(self), tmp), exc_info=sys.exc_info())
         except ValueError, e:
           self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
           self.__onComplete(success=False)
           break
+
+      try:
+        with open(self._logPath, 'a+') as mayaLog:
+          mayaLog.write(tmp)
+      except IOError, e:
+        self.logger.error('{0} {1}'.format(repr(self), e), exc_info=sys.exc_info())
     
       self.__setState('r')
 
