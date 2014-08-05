@@ -220,7 +220,8 @@ class Job:
     return '[%s] : %s@%s : { Frame %d/%d } %.2f%%' % (self.state, os.path.basename(self._scenePath), self.host, self._currentFrame, self.totalFrames, self.progress)
 
   def __repr__(self):
-    return '<{id}> Host:{host} | Scene:{scene} | Frames:{framecount} | Errorcode:{error} | Status:{status}'.format(
+    return '<{uid}> Host:{host} | Scene:{scene} | Frames:{framecount} | Errorcode:{error} | Status:{status}'.format(
+        uid=self._id
         host=self.host,
         scene=os.path.basename(self._scenePath),
         framecount=self.totalFrames,
