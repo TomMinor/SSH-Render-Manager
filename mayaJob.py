@@ -16,6 +16,7 @@ import re
 import logging
 import json
 import uuid
+import signal
 
 """
 PROBLEMS:
@@ -61,6 +62,7 @@ class Job:
 
   ERROR = {
       0 : 'Success'
+      256 : 'Login failed'
       }
 
   def __init__(self, 
@@ -78,17 +80,21 @@ class Job:
     self.originalArgs = locals()
     self.originalArgs.pop('self')
 
+    self._id = uuid.uuid4()
+
     self.logger = logging.getLogger(__name__)
     if logPath != None:
-      logName = os.path.join('%s@%s_%s.log' % (os.path.basename(scenePath), host, uuid.uuid4()))
+      logName = os.path.join('%s@%s_%s.log' % (os.path.basename(scenePath), host, self._id) ))
       logPath = os.path.expanduser(logPath)
       if not os.path.exists(logPath):
+        info.logger.debug('Making log directory for job@%s in %s' % (host, logPath))
         os.makedirs(logPath)
 
       self._jobLogFile = os.path.join(logPath, logName)
       try:
         with open(self._jobLogFile, 'w') as f:
           f.write('')
+        info.logger.debug('Job@%s log path : %s' % (host, self._jobLogFile))
       except IOError, e:
         raise
         
@@ -117,7 +123,7 @@ class Job:
     self._maxFrame = self._frameRange[1] - self._frameRange[0]
 
     if self._maxFrame < 0:
-      self.logger.error('Negative frame range entered')
+      self.logger.error(('{0} Negative frame range entered').format(repr(self)))
       raise ValueError('Negative frame range')
 
     logDir = os.path.expanduser('~/.rendermanager/renderLogs/%s/%s/' % (os.path.splitext(os.path.basename(self._scenePath))[0], self._host))
@@ -134,24 +140,24 @@ class Job:
     except IOError:
       raise
 
-    self.logger.info('Initialising job on %s' % self.host)
+    self.logger.info(('{0} Initialising job on %s' % self.host).format(repr(self)))
 
-    self.logger.debug('Maya job log path: %s' % self._logPath)
+    self.logger.debug(('{0} Maya job log path: %s' % self._logPath).format(repr(self)))
 
     self._user = user if user else getpass.getuser() 
-    self.logger.debug('Session user : %s' % self._user)
+    self.logger.debug(('{0} Session user : %s' % self._user).format(repr(self)))
 
-    self.logger.debug('Parsing scene file for output prefix...')
+    self.logger.debug(('{0} Parsing scene file for output prefix...').format(repr(self)))
     try:
       with open(os.path.expanduser(self.scenePath)) as f:
           for line in f:
             if 'setAttr ".ifp" -type "string"' in line:
               self.outputPrefix = line.split('"')[-2]
-              self.logger.debug('File name prefix found, using %s' % self.outputPrefix)
+              self.logger.debug(('{0} File name prefix found, using %s' % self.outputPrefix).format(repr(self)))
               break
           else:
             self.outputPrefix = os.path.splitext(os.path.basename(self.scenePath))[0]
-            self.logger.debug('File name prefix not set, using scene name (%s)' % self.outputPrefix)
+            self.logger.debug(('{0} File name prefix not set, using scene name (%s)' % self.outputPrefix).format(repr(self)))
     except IOError:
       raise
 
@@ -193,7 +199,7 @@ class Job:
 
     self._processCall = " ".join(self._processCall)
 
-    self.logger.debug('Process call : %s' % self._processCall)
+    self.logger.debug(('{0} Process call : %s' % self._processCall).format(repr(self)))
     
     self._output = []
     self._sshOutput = '' 
@@ -205,25 +211,34 @@ class Job:
     try:
         self.process.login(self._host, self._user)
     except pxssh.ExceptionPxssh as e:
-        self.logger.error('Cannot log on as %s@%s' % (self._user, self._host))
-        raise 
+        self.logger.error(('{0} Cannot log on as %s@%s' % (self._user, self._host)).format(repr(self)))
+        self._errorCode = 256
+        self.__onComplete(success=False)
     
   def __str__(self):
     return '[%s] : %s@%s : { Frame %d/%d } %.2f%%' % (self.state, os.path.basename(self._scenePath), self.host, self._currentFrame, self.totalFrames, self.progress)
 
+  def __repr__(self):
+    return '<{id}> Host:{host} | Scene:{scene} | Frames:{framecount} | Errorcode:{error} | Status:{status}'.format(
+        host=self.host,
+        scene=os.path.basename(self._scenePath),
+        framecount=self.totalFrames,
+        error=self.errorCode,
+        status=self._state)
+
   def __setState(self, state):
     if hasattr(self, '_state'):
-      self.logger.debug("%s -> %s" % (Job.STATE[self._state], Job.STATE[state]))
+      self.logger.debug(("{0} %s -> %s" % (Job.STATE[self._state], Job.STATE[state])).format(repr(self)))
     else:
-      self.logger.debug("Setting initial state to %s" % Job.STATE[state])
+      self.logger.debug(("{0} Setting initial state to %s" % Job.STATE[state]).format(repr(self)))
     self._state = state
 
   def __setProgress(self, value):
-    self.logger.info('Frame progress : %.2f' % value)
+    self.logger.info(('{0} Frame progress : %.2f' % value).format(repr(self)))
     self._progress = value
 
   def __onComplete(self, success):
-    self.logger.info('Job finished')
+    self.logger.info(('{0} Job finished').format(repr(self)))
     if success:
       self.logger.info('Success')
       self.__setState('c')
@@ -236,15 +251,15 @@ class Job:
           for line in logFile:
             self._output.append(line.strip())
       except IOError, e:
-        self.logger.error(e, exc_info=sys.exc_info())
+        self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
     else:
       self.__setState('e')
-      if self._errorCode != None:
+      if self._errorCode != None or self._errorCode != 256:
         try:
           with open(self._logPath) as logFile:
             self.parseErrorcode([line for line in logFile])
         except IOError, e:
-          self.logger.error(e, exc_info=sys.exc_info())
+          self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
     self.close()
 
@@ -259,13 +274,13 @@ class Job:
       if self._errorCode == 0:
         self.__setState('c')
       elif self._errorCode > 0:
-        self.logger.error('Error : (%d)' % int(self._errorCode))
+        self.logger.error(('{0} Error : (%d)' % int(self._errorCode)).format(repr(self)))
       else:
-        self.logger.error('Unknown error')
+        self.logger.error(('{0} Unknown error').format(repr(self)))
 
   def run(self):
     if self._state == 'i':
-      self.logger.info('Executing remote process on %s' % self.host)
+      self.logger.info(('{0} Executing remote process on %s' % self.host).format(repr(self)))
       # Run the process and evaluate it's return value when complete, ensuring we capture success/failure
       self.process.sendline(';'.join([r'nice %s' % self._processCall,
                                       r"RETVAL=$?",
@@ -273,7 +288,7 @@ class Job:
                                       r"[ $RETVAL -ne 0 ] && echo COMPLETE_ERROR"]
                                       ))
 
-      self.logger.info('Ignoring initial output')
+      self.logger.info(('{0} Ignoring initial output').format(repr(self)))
 
       # Read until the job starts, and write any errors to file if it cannot
       tmp = ''
@@ -292,7 +307,7 @@ class Job:
               with open(self._logPath, 'a+') as mayaLog:
                 mayaLog.write(tmp)
             except IOError, e:
-              self.logger.error(e, exc_info=sys.exc_info())
+              self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
 
             self.logger.error('Prematurely exited process')
             self.__onComplete(success=False)
@@ -300,7 +315,7 @@ class Job:
         except TIMEOUT, e:
           pass
         except ValueError, e:
-          self.logger.error(e, exc_info=sys.exc_info())
+          self.logger.error('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
           self.__onComplete(success=False)
           break
     
@@ -314,13 +329,13 @@ class Job:
       try:
         self._sshOutput += str(self.process.read_nonblocking()) 
       except TIMEOUT, e:
-        self.logger.debug(e, exc_info=sys.exc_info())
+        self.logger.debug('{0] {1}'.format(repr(self), e), exc_info=sys.exc_info())
       except ValueError, e:
-        self.logger.error(e)
+        self.logger.error('{0] {1}'.format(repr(self), e))
         self.__setState('e', exc_info=sys.exc_info())
         return
       except EOF, e:
-        self.logger.error(e)
+        self.logger.error('{0] {1}'.format(repr(self), e))
         self.__setState('e', exc_info=sys.exc_info())
         return
       
@@ -351,53 +366,56 @@ class Job:
                     if 'rendering statistics' in line:
                         renderingStats_LineNum = num
                         if self._currentFrame != self._maxFrame:
-                          self.logger.debug('Incrementing frame counter')
+                          self.logger.debug(('{0} Incrementing frame counter').format(repr(self)))
                           self._currentFrame += 1
                     if 'Maya exited with status' in line:
                         self._errorCode = int(re.findall('\d+', line)[0])
                         if self._errorCode != 0:
-                          self.logger.error('Error : (%d)' % int(self._errorCode))
+                          self.logger.error(('{0} Error : (%d)' % int(self._errorCode)).format(repr(self)))
                           self.__onComplete(success=False)
                         else:
                           self.__onComplete(success=True)
 
                 if progressResult_LineNum > renderingStats_LineNum:
-                    self.logger.debug('Getting remaining frame progress')
+                    self.logger.debug(('{0} Getting remaining frame progress').format(repr(self)))
                     percentage = re.findall(r'\d+.\d+%', progressResults[-1])[0]
                     self.__setProgress(float(percentage[:-1]))
                 else:
                     self.__setProgress(100.0)
       except IOError, e:
-        self.logger.error(e.message, exc_info=sys.exc_info())
+        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
 
   def pause(self):
     if not self._state == 'p':
-        self.logger.info('Job paused')
-        self.process.kill(23) #SIGSTOP
+        self.logger.info(('{0} Job paused').format(repr(self)))
+        self.logger.debug(("{0} Sending SIGSTOP to %s on %s" % (self._binPath, self.host)).format(repr(self)))
+        self.process.kill(signal.SIGSTOP) 
         self.__setState('p')
 
   def resume(self):
     if self._state == 'p':
-        self.logger.info('Job resumed')
-        self.process.kill(25) #SIGCONT
+        self.logger.info(('{0} Job resumed').format(repr(self)))
+        self.logger.debug(("{0} Sending SIGCONT to %s on %s" % (self._binPath, self.host)).format(repr(self)))
+        self.process.kill(signal.SIGCONT) 
         self.__setState('r')
 
   def kill(self):
     self.resume()
     if self._state == 'r':
-        self.logger.info("Killing %s on %s" % (self._binPath, self.host))
         # I know using both is redundant but we want to be sure all child processes die too
-        self.process.kill(2) #SIGINT
-        self.process.kill(9) #SIGKILL
+        self.logger.debug(("{0} Sending SIGINT to %s on %s" % (self._binPath, self.host)).format(repr(self)))
+        self.process.kill(signal.SIGINT) 
+        self.logger.debug(("{0} Sending SIGKILL to %s on %s" % (self._binPath, self.host)).format(repr(self)))
+        self.process.kill(signal.SIGKILL) 
         self._state = 'e' if self.errorCode else 'c'
     else:
         # Even if the process hasn't started running properly, try to kill it anyway
-        self.logger.info('Attempting kill with no running process on %s' % self.host)
-        self.process.kill(9) #SIGKILL
+        self.logger.debug(('{0} Attempting to SIGKILL with no running process on %s' % self.host).format(repr(self)))
+        self.process.kill(signal.SIGKILL) 
         self._state = 'e' if self.errorCode else 'c'
 
   def close(self):
-    self.logger.info('Closing session')
+    self.logger.info(('{0} Closing session').format(repr(self)))
     self.kill()
 
     if not self.completed(): 
@@ -406,20 +424,20 @@ class Job:
     try:
         self.process.logout()
     except OSError as e:
-        self.logger.error(e.message, exc_info=sys.exc_info())
+        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
     except ValueError as e:
-        self.logger.error(e.message, exc_info=sys.exc_info())
+        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
 
     try:
         with open(self._logPath, 'r') as mayaLog:
             self._output = [ line for line in mayaLog ]
     except IOError as e:
-        self.logger.error(e.message, exc_info=sys.exc_info())
+        self.logger.error('{0] {1}'.format(repr(self), e).message, exc_info=sys.exc_info())
 
     self.process.close(force=True)
 
   def getNewInstanceofJob(self):
-    self.logging.info('Returning new instance of job on %s' % self.host, exc_infosys.exc_info())
+    self.logging.info(('{0} Returning new instance of job on %s' % self.host, exc_infosys.exc_info()).format(repr(self)))
     return Job(**self.originalArgs)
 
   def completed(self):
