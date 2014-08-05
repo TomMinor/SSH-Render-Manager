@@ -110,6 +110,8 @@ class Job:
 
     # Seek value for reading from file
     self.p = 0
+    self._state = None
+    self._errorCode = None
 
     self._host = host
     self._binPath = binPath
@@ -206,7 +208,6 @@ class Job:
     self.process = pxssh.pxssh()
     
     self.__setState('i')
-    self._errorCode = None
 
     try:
         self.process.login(self._host, self._user)
@@ -227,7 +228,7 @@ class Job:
         status=self._state)
 
   def __setState(self, state):
-    if hasattr(self, '_state'):
+    if self._state 
       self.logger.debug(("{0} %s -> %s" % (Job.STATE[self._state], Job.STATE[state])).format(repr(self)))
     else:
       self.logger.debug(("{0} Setting initial state to %s" % Job.STATE[state]).format(repr(self)))
