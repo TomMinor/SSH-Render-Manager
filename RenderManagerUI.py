@@ -162,10 +162,14 @@ class ManagerUI(tk.Frame):
             displayError('Invalid workspace file', 'Failed to find render path  in workspace file, exiting', self.logger)
             sys.exit(1)
 
+
         # Check if the output dir is relative to the workspace
         if not os.path.isabs(outputDir):
             outputDir = os.path.join(os.path.dirname(self.workspacePath), outputDir)
             self.logger.info("Relative path detected, expanding to %s" % outputDir)
+
+        if "transfer" not in outputDir:
+            displayError('Unpredictable path', 'The output directory does not appear to be on a /transfer/ drive, copying files may not work as intended', self.logger)
 
         hostsDir = os.path.join(ManagerUI.APPDIR, 'hostMachines')
         self.logger.info("Loading hosts from %s" % hostsDir)
