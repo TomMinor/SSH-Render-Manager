@@ -19,7 +19,6 @@ import json
 from threading import Timer
 
 import mayaJob
-#import dummyJob as mayaJob
 
 """
 Not the most readable code in places, but it works for what it is.
@@ -291,11 +290,12 @@ class ManagerUI(tk.Frame):
 
     def update(self):
         if not self.shouldExit:
+            """ RENDER QUEUE - BROKEN
             for host in self.renderQueue:
                 self.logger.debug('Updating first job on host %s' % host)
                 if self.renderQueue[host]:
                     topJob = self.renderQueue[host][0]
-                    self.logger.debug('Current job on %s : %s' % (host, str(topJob)))
+                    self.logger.debug('Current job on %s : %s' % (host, repr(topJob)))
 
                     if not topJob.running:
                         try:
@@ -308,9 +308,14 @@ class ManagerUI(tk.Frame):
                     elif topJob.completed():
                         self.logger.info('Popping finished job off queue on %s' % host)
                         self.renderQueue[host].pop()
+            """
             
             for job in self.renderJobs:
-                self.logger.debug('Checking if job %s completed...' % str(job))
+                if not job.running:
+                    self.logger.debug('Starting job %s' % repr(job))
+                    job.run()
+
+                self.logger.debug('Checking if job %s completed...' % repr(job))
                 if not job.completed():
                     self.logger.debug('Not completed, updating')
                     job.update()
@@ -639,10 +644,12 @@ class ManagerUI(tk.Frame):
             return
 
         self.renderJobs.append(newJob)
+        """ RENDER QUEUE - BROKEN
         if newJob.host in self.renderQueue:
             self.renderQueue[newJob.host].append(newJob)
         else:
             self.renderQueue[newJob.host] = [newJob]
+        """
 
         self.logger.debug('New job state > %s' % newJob.state)
         self.logger.debug('New job is running? %s' % newJob.running)
