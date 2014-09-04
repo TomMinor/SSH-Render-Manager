@@ -203,7 +203,7 @@ class ManagerUI(tk.Frame):
         self.lastOutput = []
         
         self.defaults = {}
-        self.defaults['binDir'] = '/opt/autodesk/maya2014-x64/bin/Render'
+        self.defaults['binDir'] = '/opt/autodesk/maya/bin/Render'
         self.defaults['outputDir'] = outputDir
         self.defaults['camOverride'] = 'persp'
         self.defaults['resolutionOverride'] = (640, 480)

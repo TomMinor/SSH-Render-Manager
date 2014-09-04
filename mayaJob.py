@@ -281,6 +281,9 @@ class Job:
         self.logger.error(('{0} Unknown error').format(repr(self)))
 
   def run(self):
+    # A horribly hacky way of checking for the end of the initial output
+    SENTINEL_STRING = 'Locale is: "Locale:en_US.UTF-8 CodeSet:UTF-8"'
+
     if self._state == 'i':
       self.logger.info(('{0} Executing remote process on %s' % self.host).format(repr(self)))
       # Run the process and evaluate it's return value when complete, ensuring we capture success/failure
@@ -294,10 +297,14 @@ class Job:
 
       # Read until the job starts, and write any errors to file if it cannot
       tmp = ''
-      while tmp.split('\n')[-1] != 'Locale is: "Locale:en_GB.utf8 CodeSet:UTF-8"':
+      while tmp.split('\n')[-1] != SENTINEL_STRING:
         try:
           tmp += self.process.read_nonblocking()
           lines = tmp.split('\n')
+          print lines[-1]
+          print lines[-1] == SENTINEL_STRING
+
+
           if 'COMPLETE_ERROR' == lines[-1]:
             # Premature exit
             try:
